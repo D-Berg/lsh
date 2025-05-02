@@ -64,7 +64,14 @@ fn execute(gpa: Allocator, args: [][]const u8, stderr: std.io.AnyWriter) !Status
     if (std.meta.stringToEnum(BuiltinCommmand, args[0])) |cmd| {
         switch (cmd) {
             .exit => return Status.abort,
-            .cd => {return Status.okey;}, // TODO: fix,
+            .cd => {
+                if (args.len == 2) {
+                    std.process.changeCurDir(args[1]) catch {
+                        try stderr.print("lsh: failed to change dir", .{});
+                    };
+                }
+                return Status.okey;
+            },
             .help => {
                 try help();
                 return Status.okey;
@@ -133,6 +140,7 @@ fn launch(gpa: Allocator, args: [][]const u8, stderr: std.io.AnyWriter) !Status 
     return Status.okey;
 
 }
+
 
 // 
 extern "c" fn getWuntraced() c_int;
