@@ -66,8 +66,8 @@ fn execute(gpa: Allocator, args: [][]const u8, stderr: std.io.AnyWriter) !Status
             .exit => return Status.abort,
             .cd => {
                 if (args.len == 2) {
-                    std.process.changeCurDir(args[1]) catch {
-                        try stderr.print("lsh: failed to change dir", .{});
+                    std.process.changeCurDir(args[1]) catch |err| {
+                        try stderr.print("lsh: failed to change dir because of {s}\n", .{@errorName(err)});
                     };
                 }
                 return Status.okey;
