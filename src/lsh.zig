@@ -91,12 +91,8 @@ fn splitLine(gpa: Allocator, line: []const u8) ![][]const u8 {
 
     var iterator = std.mem.tokenizeAny(u8, line, " \t\r\n\x07");
 
-    var i: usize = 1;
     while (iterator.next()) |token| {
-        log.debug("word {} = {s}", .{i, token});
         try token_array.append(gpa, token);
-        i += 1;
-
     }
 
     return try token_array.toOwnedSlice(gpa);
@@ -115,7 +111,6 @@ fn launch(gpa: Allocator, args: [][]const u8, stderr: std.io.AnyWriter) !Status 
 
     if (pid == 0) {
         // child process
-        
         std.process.execve(gpa, args, &env_map) catch {
             try stderr.print("lsh: failed to execute {s}\n", .{args[0]});
         };
@@ -124,7 +119,7 @@ fn launch(gpa: Allocator, args: [][]const u8, stderr: std.io.AnyWriter) !Status 
 
     } else if (pid < 0) {
         // error forking
-        std.debug.print("failed to fork\n", .{});
+        try stderr.print("failed to fork\n", .{});
         return Status.abort;
         
     } else {
@@ -142,7 +137,7 @@ fn launch(gpa: Allocator, args: [][]const u8, stderr: std.io.AnyWriter) !Status 
 }
 
 
-// 
+// c helper functions not found in zig std
 extern "c" fn getWuntraced() c_int;
 extern "c" fn wifexited(status: c_int) bool;
 extern "c" fn wifsignaled(status: c_int) bool;
