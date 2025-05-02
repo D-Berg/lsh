@@ -118,13 +118,11 @@ fn launch(gpa: Allocator, args: [][]const u8, stderr: std.io.AnyWriter) !Status 
         return Status.abort;
 
     } else if (pid < 0) {
-        // error forking
+        // error forking (still parent, since no child was created
         try stderr.print("failed to fork\n", .{});
-        return Status.abort;
-        
     } else {
-        // parent process
 
+        // parent process
         var wpid = std.c.waitpid(pid, @ptrCast(&status), getWuntraced());
 
         while (!wifexited(@intFromEnum(status)) and !wifsignaled(@intFromEnum(status))) {
