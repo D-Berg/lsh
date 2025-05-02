@@ -86,6 +86,7 @@ fn execute(gpa: Allocator, args: []const []const u8, stderr: std.io.AnyWriter) !
     return try launch(gpa, args, stderr);
 }
 
+//TODO: dont split on ""
 fn splitLine(gpa: Allocator, line: []const u8) ![]const []const u8 {
 
     var token_array = ArrayList([]const u8).empty;
@@ -105,7 +106,11 @@ fn launch(gpa: Allocator, args: []const []const u8, stderr: std.io.AnyWriter) !S
 
 
     var status: Status = undefined;
-    const pid = std.c.fork();
+    const pid = std.posix.fork() catch {
+        // error forking (still parent, since no child was created
+        try stderr.print("failed to fork\n", .{});
+        return Status.okey;
+    };
 
     log.debug("new pid = {}\n", .{pid});
     var arena_allocator = std.heap.ArenaAllocator.init(gpa);
@@ -132,10 +137,7 @@ fn launch(gpa: Allocator, args: []const []const u8, stderr: std.io.AnyWriter) !S
         log.debug("exiting child", .{}); // only called if execvpeZ fails
         std.process.exit(1);
 
-    } else if (pid < 0) {
-        // error forking (still parent, since no child was created
-        try stderr.print("failed to fork\n", .{});
-    } else {
+    }  else {
 
         // parent process
         var wpid = std.c.waitpid(pid, @ptrCast(&status), getWuntraced());
