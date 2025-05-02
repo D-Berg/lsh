@@ -49,13 +49,15 @@ pub fn loop(gpa: Allocator) !void {
         const args = try splitLine(gpa, line);
         defer gpa.free(args);
 
+        log.debug("args.len = {}", .{args.len});
+
         status = try execute(gpa, args, stderr.any());
 
     }
 
 }
 
-fn execute(gpa: Allocator, args: [][]const u8, stderr: std.io.AnyWriter) !Status {
+fn execute(gpa: Allocator, args: []const []const u8, stderr: std.io.AnyWriter) !Status {
 
     if (args.len == 0) {
         return Status.okey;
@@ -84,7 +86,7 @@ fn execute(gpa: Allocator, args: [][]const u8, stderr: std.io.AnyWriter) !Status
     return try launch(gpa, args, stderr);
 }
 
-fn splitLine(gpa: Allocator, line: []const u8) ![][]const u8 {
+fn splitLine(gpa: Allocator, line: []const u8) ![]const []const u8 {
 
     var token_array = ArrayList([]const u8).empty;
     errdefer token_array.deinit(gpa);
@@ -99,23 +101,36 @@ fn splitLine(gpa: Allocator, line: []const u8) ![][]const u8 {
 
 }
 
-fn launch(gpa: Allocator, args: [][]const u8, stderr: std.io.AnyWriter) !Status {
+fn launch(gpa: Allocator, args: []const []const u8, stderr: std.io.AnyWriter) !Status {
+
 
     var status: Status = undefined;
     const pid = std.c.fork();
 
     log.debug("new pid = {}\n", .{pid});
+    var arena_allocator = std.heap.ArenaAllocator.init(gpa);
+    defer arena_allocator.deinit();
 
-    var env_map = try std.process.getEnvMap(gpa);
-    defer env_map.deinit();
+    const arena = arena_allocator.allocator();
+
+    var argsv = try arena.allocSentinel(?[*:0]const u8, args.len, null);
+    for (args, 0..) |arg, i| argsv[i] = try arena.dupeZ(u8, arg);
 
     if (pid == 0) {
-        // child process
-        std.process.execve(gpa, args, &env_map) catch {
-            try stderr.print("lsh: failed to execute {s}\n", .{args[0]});
-        };
+        // in child process
 
-        return Status.abort;
+        const err = std.posix.execvpeZ(argsv[0].?, argsv.ptr, std.c.environ);
+        switch (err) {
+            else => {
+                try stderr.print(
+                    "lsh: failed to execute {s} because of {s}\n", 
+                    .{ args[0], @errorName(err) }
+                );
+            },
+        }
+
+        log.debug("exiting child", .{}); // only called if execvpeZ fails
+        std.process.exit(1);
 
     } else if (pid < 0) {
         // error forking (still parent, since no child was created
