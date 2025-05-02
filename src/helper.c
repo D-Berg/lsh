@@ -1,19 +1,20 @@
 #include <sys/wait.h>
+#include <stdbool.h>
 #include <unistd.h>
 
 int getWuntraced() {
     return WUNTRACED;
 }
 
-_Bool wifexited(int status) {
-    if (WIFEXITED(status)) return 1;
-    return 0;
+bool wifexited(int status) {
+    if (WIFEXITED(status)) return true;
+    return false;
 }
 
 
-_Bool wifsignaled(int status) {
-    if (WIFSIGNALED(status)) return 1;
-    return 0;
+bool wifsignaled(int status) {
+    if (WIFSIGNALED(status)) return true;
+    return false;
 }
 
 
