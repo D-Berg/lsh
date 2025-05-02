@@ -29,6 +29,7 @@ pub fn loop(gpa: Allocator) !void {
 
     const stdout = std.io.getStdOut().writer();
     const stdin = std.io.getStdIn().reader();
+    const stderr = std.io.getStdErr().writer();
 
     var buffer = std.ArrayListUnmanaged(u8).empty;
     errdefer buffer.deinit(gpa);
@@ -48,13 +49,13 @@ pub fn loop(gpa: Allocator) !void {
         const args = try splitLine(gpa, line);
         defer gpa.free(args);
 
-        status = try execute(gpa, args);
+        status = try execute(gpa, args, stderr.any());
 
     }
 
 }
 
-fn execute(gpa: Allocator, args: [][]const u8) !Status {
+fn execute(gpa: Allocator, args: [][]const u8, stderr: std.io.AnyWriter) !Status {
 
     if (args.len == 0) {
         return Status.okey;
@@ -73,7 +74,7 @@ fn execute(gpa: Allocator, args: [][]const u8) !Status {
         }
     }
 
-    return try launch(gpa, args);
+    return try launch(gpa, args, stderr);
 }
 
 fn splitLine(gpa: Allocator, line: []const u8) ![][]const u8 {
@@ -95,20 +96,21 @@ fn splitLine(gpa: Allocator, line: []const u8) ![][]const u8 {
 
 }
 
-fn launch(gpa: Allocator, args: [][]const u8) !Status {
+fn launch(gpa: Allocator, args: [][]const u8, stderr: std.io.AnyWriter) !Status {
 
     var status: Status = undefined;
     const pid = std.c.fork();
 
-    std.debug.print("new pid = {}\n", .{pid});
+    log.debug("new pid = {}\n", .{pid});
 
     var env_map = try std.process.getEnvMap(gpa);
     defer env_map.deinit();
+
     if (pid == 0) {
         // child process
         
         std.process.execve(gpa, args, &env_map) catch {
-            std.debug.print("lsh: failed to execute {s}\n", .{args[0]});
+            try stderr.print("lsh: failed to execute {s}\n", .{args[0]});
         };
 
         return Status.abort;
