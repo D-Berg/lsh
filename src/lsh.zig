@@ -139,7 +139,6 @@ fn launch(gpa: Allocator, args: [][]const u8, stderr: std.io.AnyWriter) !Status 
 extern "c" fn getWuntraced() c_int;
 extern "c" fn wifexited(status: c_int) bool;
 extern "c" fn wifsignaled(status: c_int) bool;
-extern "c" fn execvp(path: [*:0]const u8, argv: [*:null]const ?[*:0]const u8) c_int;
 
 fn help() !void {
 
