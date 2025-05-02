@@ -5,6 +5,26 @@ pub fn build(b: *std.Build) void {
 
     const optimize = b.standardOptimizeOption(.{});
 
+    // const translate = b.addTranslateC(.{
+    //     .target = target,
+    //     .optimize = optimize,
+    //     .root_source_file = b.path("src/c.h"),
+    // });
+
+    const helper_mod = b.createModule(.{
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+    });
+    helper_mod.addCSourceFile(.{ .file = b.path("src/helper.c") });
+    helper_mod.addIncludePath(b.path("src"));
+
+    const helper_lib = b.addLibrary(.{
+        .name = "helper",
+        .root_module = helper_mod,
+        .linkage = .static,
+    });
+
     const exe_mod = b.createModule(.{
         .root_source_file = b.path("src/main.zig"),
         .target = target,
@@ -15,6 +35,8 @@ pub fn build(b: *std.Build) void {
         .name = "lsh",
         .root_module = exe_mod,
     });
+
+    exe.linkLibrary(helper_lib);
 
     b.installArtifact(exe);
 
