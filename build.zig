@@ -29,6 +29,7 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
+        .strip = b.option(bool, "strip", "strip the binary"),
     });
 
     const exe = b.addExecutable(.{
